@@ -20,7 +20,7 @@ pub mod counter {
 
     pub fn increement(ctx: Context<Update>) -> Result<()> {
         let counter_account = &mut ctx.accounts.counter;
-        counter_account.count += 1;
+        counter_account.count = counter_account.count.checked_add(1).unwrap();
 
         msg!(
             "Successfully increemented the count: {}",
@@ -32,7 +32,7 @@ pub mod counter {
     pub fn decreement(ctx: Context<Update>) -> Result<()> {
         let counter_account = &mut ctx.accounts.counter;
 
-        counter_account.count -= 1;
+        counter_account.count = counter_account.count.checked_sub(1).unwrap();
 
         msg!(
             "Successfully decreemented the count: {}",
