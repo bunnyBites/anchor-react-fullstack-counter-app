@@ -1,3 +1,9 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/counter.json`.
+ */
 export type Counter = {
   address: "9zdwm1viRGxFcdBCBUH2TV1fXb3GN5Vjfd7rs7ZiTVbf";
   metadata: {
@@ -77,7 +83,7 @@ export type Counter = {
           signer: true;
         },
         {
-          name: "system_program";
+          name: "systemProgram";
           address: "11111111111111111111111111111111";
         },
       ];
@@ -198,13 +204,13 @@ export const IDL: Counter = {
   ],
   accounts: [
     {
-      name: "counter",
+      name: "Counter",
       discriminator: [255, 176, 4, 245, 188, 253, 124, 25],
     },
   ],
   types: [
     {
-      name: "counter",
+      name: "Counter",
       type: {
         kind: "struct",
         fields: [

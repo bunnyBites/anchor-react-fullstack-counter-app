@@ -1,25 +1,59 @@
-import { useEffect, useState } from "react";
-import { CounterData, counterPDA, program } from "../anchor/setup";
-import { useConnection } from "@solana/wallet-adapter-react";
+import { useEffect, useCallback, useState } from "react";
+import { AnchorHelper } from "../anchor/setup";
+import {
+  AnchorWallet,
+  useConnection,
+  useWallet,
+} from "@solana/wallet-adapter-react";
+import { AnchorProvider } from "@coral-xyz/anchor";
 
 export const CounterDisplay: React.FC = () => {
-  const { connection } = useConnection();
   const [counterData, setCounterData] = useState<CounterData | null>(null);
-  console.log(counterData);
+  const { connection } = useConnection();
+  const wallet = useWallet();
+
+  // Only create provider and program if wallet is connected
+  const provider =
+    wallet && connection
+      ? new AnchorProvider(connection, wallet as AnchorWallet, {
+          commitment: "confirmed",
+        })
+      : null;
+
+  const program =
+    provider && wallet && connection ? AnchorHelper.getProgram(provider) : null;
+  const counterPDA =
+    provider && wallet && connection
+      ? AnchorHelper.getCounterPDA(provider)
+      : null;
+
+  // Fetch counter data
+  const fetchCounterData = useCallback(async () => {
+    if (!program || !counterPDA || !!counterData) return;
+    try {
+      const data = await program.account.counter.fetch(counterPDA);
+      setCounterData(data);
+    } catch (error) {
+      console.error("Error fetching counter data:", error);
+    }
+  }, [program, counterPDA]);
 
   useEffect(() => {
-    // Fetch initial account data
-    program.account.counter.fetch(counterPDA).then((data) => {
-      setCounterData(data);
-    });
+    fetchCounterData();
+  }, [fetchCounterData]);
+
+  useEffect(() => {
+    if (!program || !counterPDA || !connection) return;
 
     // Subscribe to account change
     const subscriptionId = connection.onAccountChange(
       counterPDA,
       (accountInfo) => {
-        setCounterData(
-          program.coder.accounts.decode("counter", accountInfo.data),
-        );
+        if (program) {
+          setCounterData(
+            program.coder.accounts.decode("counter", accountInfo.data),
+          );
+        }
       },
     );
 
@@ -27,16 +61,60 @@ export const CounterDisplay: React.FC = () => {
       // Unsubscribe from account change
       connection.removeAccountChangeListener(subscriptionId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [program]);
+  }, [connection, counterPDA, program]);
+
+  const onIncrementCounter = async () => {
+    if (!program || !wallet.publicKey || !counterPDA) return;
+    try {
+      const tx = await program.methods
+        .increement()
+        .accounts({
+          counter: counterPDA,
+          user: wallet.publicKey,
+        })
+        .rpc();
+      console.log("Increment successful!", tx);
+    } catch (err) {
+      console.error("Increment failed!", err);
+    }
+  };
+
+  const onDecrementCounter = async () => {
+    if (!program || !wallet.publicKey || !counterPDA) return;
+    try {
+      const tx = await program.methods
+        .decreement()
+        .accounts({
+          counter: counterPDA,
+          user: wallet.publicKey,
+        })
+        .rpc();
+      console.log("Decrement successful!", tx);
+    } catch (err) {
+      console.error("Decrement failed!", err);
+    }
+  };
+
+  // Show nothing if wallet is not connected
+  if (!wallet.connected) {
+    return null;
+  }
 
   return (
     <div className="d-flex align-items-center justify-content-center py-3">
-      <button type="button" className="btn btn-danger">
+      <button
+        onClick={onDecrementCounter}
+        type="button"
+        className="btn btn-danger"
+      >
         -
       </button>
-      <div className="px-4 display-5">{counterData?.count}</div>
-      <button type="button" className="btn btn-success">
+      <div className="px-4 display-5">{counterData?.count ?? 0}</div>
+      <button
+        type="button"
+        onClick={onIncrementCounter}
+        className="btn btn-success"
+      >
         +
       </button>
     </div>

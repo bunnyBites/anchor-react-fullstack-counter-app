@@ -1,23 +1,27 @@
-import { IdlAccounts, Program } from "@coral-xyz/anchor";
+import { IdlAccounts, Program, Provider } from "@coral-xyz/anchor";
 import { IDL, Counter } from "./idl";
 import { Buffer } from "buffer";
-import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 
-const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+export class AnchorHelper {
+  // Initialize the program interface with the IDL, program ID, and connection.
+  // This setup allows us to interact with the on-chain program using the defined interface.
+  public static getProgram = (provider: Provider) =>
+    new Program<Counter>(IDL, provider);
 
-// Initialize the program interface with the IDL, program ID, and connection.
-// This setup allows us to interact with the on-chain program using the defined interface.
-export const program = new Program<Counter>(IDL, {
-  connection,
-});
+  // Derive a PDA for the counter account, using "counter" as the seed.
+  // We'll use this to update the counter on-chain.
 
-// Derive a PDA for the counter account, using "counter" as the seed.
-// We'll use this to update the counter on-chain.
-export const [counterPDA] = PublicKey.findProgramAddressSync(
-  [Buffer.from("counter")],
-  program.programId,
-);
+  public static getCounterPDA = (provider: Provider) => {
+    const [counterPDA] = PublicKey.findProgramAddressSync(
+      [Buffer.from("counter")],
+      AnchorHelper.getProgram(provider).programId,
+    );
+
+    return counterPDA;
+  };
+}
 
 // Define a TypeScript type for the Counter data structure based on the IDL.
 // This ensures type safety when interacting with the "counter" account, facilitating development and maintenance.
-export type CounterData = IdlAccounts<Counter>["counter"];
+export type CounterData = IdlAccounts<Counter>["Counter"];
